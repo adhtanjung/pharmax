@@ -1,5 +1,5 @@
 "use strict";
-const { Model } = require("sequelize");
+const {Model} = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     /**
@@ -25,6 +25,17 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         onDelete: "cascade",
       });
+      this.hasMany(models.Admin_Notif, {
+        foreignKey: "user_id",
+        onDelete: "cascade",
+      });
+      this.hasMany(models.User_Notif, {
+        foreignKey: "user_id",
+        onDelete: "cascade",
+      });
+      this.hasMany(models.Custom_Product, {
+        foreignKey: "user_id",
+      });
     }
   }
   User.init(
@@ -39,8 +50,8 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         type: DataTypes.STRING,
       },
-      user_email: { allowNull: false, type: DataTypes.STRING },
-      user_password: { allowNull: false, type: DataTypes.STRING },
+      user_email: {allowNull: false, type: DataTypes.STRING},
+      user_password: {allowNull: false, type: DataTypes.STRING},
       user_role_id: {
         allowNull: false,
         defaultValue: 2,
@@ -54,6 +65,11 @@ module.exports = (sequelize, DataTypes) => {
       user_security_question: {
         allowNull: false,
         type: DataTypes.STRING,
+      },
+      is_banned: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
       },
       createdAt: {
         allowNull: false,

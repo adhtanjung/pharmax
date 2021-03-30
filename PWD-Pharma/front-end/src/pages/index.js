@@ -10,6 +10,20 @@ import ProductAdmin from "./ProductAdmin";
 import ProductFlowAdmin from "./ProductFlowAdmin";
 import RecipesAdmin from "./RecipesAdmin";
 import Products from "./Products";
+import UserAddress from "./UserAddress";
+import {ProductDetail} from "./ProductDetail";
+import {Cart} from "./Cart";
+import Landing from "./Landing";
+import CustomOrder from "./CustomOrder";
+import ProductFlowDetail from "./ProductFlowDetail";
+import CustomAdmin from "./CustomAdmin";
+import {CheckOut} from "./CheckOut";
+import PurchaseHistory from "./PurchaseHistory";
+import {Transaction} from "./Transaction";
+import AdminUserData from "./AdminUserData";
+import {TransactionAdmin} from "./TransactionAdmin";
+import NotificationAdmin from "./NotificationAdmin";
+import AllNotifAdmin from "./AllNotifAdmin";
 
 export {
   HomeAdmin,
@@ -24,4 +38,18 @@ export {
   ForgotPassword,
   ChangePassword,
   Products,
+  UserAddress,
+  ProductDetail,
+  Landing,
+  ProductFlowDetail,
+  Cart,
+  CustomOrder,
+  CheckOut,
+  CustomAdmin,
+  PurchaseHistory,
+  Transaction,
+  AdminUserData,
+  TransactionAdmin,
+  NotificationAdmin,
+  AllNotifAdmin,
 };

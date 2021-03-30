@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Redirect } from "react-router";
 import { Link } from "react-router-dom";
 import { nullifyErrorAction, registerAction } from "../redux/actions";
+import spinner from "../assets/spinner/oval.svg";
 
 let userData = {
   email: "",
@@ -17,10 +18,12 @@ const SignUp = () => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user);
 
+  const reNumber = /[0-9]/;
+  const re6Chars = /^.{6,}$/;
+  const reSpecialChar = /\W|_/;
+
   useEffect(() => {
-    return () => {
-      dispatch(nullifyErrorAction());
-    };
+    dispatch(nullifyErrorAction());
   }, [dispatch]);
 
   const togglePasswordVisibility = () => {
@@ -35,9 +38,14 @@ const SignUp = () => {
     }));
   };
 
+  const registerBtn = (e) => {
+    e.preventDefault();
+    dispatch(registerAction(userInput));
+  };
+
   const registerForm = () => {
     return (
-      <div className="flex flex-col space-y-5">
+      <form className="flex flex-col space-y-5">
         <div className="flex flex-col space-y-1">
           <label
             for="email"
@@ -46,6 +54,7 @@ const SignUp = () => {
             Email address
           </label>
           <input
+            required
             type="email"
             id="email"
             value={userInput.email}
@@ -62,6 +71,7 @@ const SignUp = () => {
             Username
           </label>
           <input
+            required
             type="text"
             id="username"
             value={userInput.username}
@@ -80,24 +90,62 @@ const SignUp = () => {
             </label>
           </div>
           <input
+            required
             type={passwordShown ? "text" : "password"}
             id="password"
             value={userInput.password}
             onChange={handleInput}
-            className="text-gray-700 font-semibold px-4 py-2 transition duration-300 border border-gray-300 rounded focus:border-transparent focus:outline-none focus:ring-4 focus:ring-blue-200"
+            className="text-gray-700 font-semibold px-4 pt-2 transition duration-300 border border-gray-300 rounded focus:border-transparent focus:outline-none focus:ring-4 focus:ring-blue-200"
           />
+          <div className="flex justify-between mt-1">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="remember"
+                onClick={togglePasswordVisibility}
+                className="border-gray-500 w-4 h-4 transition duration-300 rounded focus:ring-2 focus:ring-offset-0 focus:outline-none focus:ring-blue-200"
+              />
+              <label
+                for="remember"
+                className="text-sm font-semibold text-gray-500"
+              >
+                Show password
+              </label>
+            </div>
+            <div style={{ fontSize: "12px" }}>
+              <ul className="flex flex-row justify-content-between p-1 pl-3 space-x-4">
+                <li
+                  style={{
+                    color: reNumber.test(userInput.password)
+                      ? "#7dbf5c"
+                      : "red",
+                  }}
+                >
+                  A number
+                </li>
+                <li
+                  style={{
+                    color: re6Chars.test(userInput.password)
+                      ? "#7dbf5c"
+                      : "red",
+                  }}
+                >
+                  Min 6 chars
+                </li>
+                <li
+                  style={{
+                    color: reSpecialChar.test(userInput.password)
+                      ? "#7dbf5c"
+                      : "red",
+                  }}
+                >
+                  A special char
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="remember"
-            onClick={togglePasswordVisibility}
-            className="border-gray-500 w-4 h-4 transition duration-300 rounded focus:ring-2 focus:ring-offset-0 focus:outline-none focus:ring-blue-200"
-          />
-          <label for="remember" className="text-sm font-semibold text-gray-500">
-            Show password
-          </label>
-        </div>
+
         <div className="flex flex-col space-y-1">
           <label
             // Security Question Input
@@ -107,6 +155,7 @@ const SignUp = () => {
             Security Question: What is your favorite animal?
           </label>
           <input
+            required
             type="text"
             id="security_question"
             value={userInput.security_question}
@@ -116,17 +165,26 @@ const SignUp = () => {
           />
         </div>
         <div>
-          <button
-            type="submit"
-            onClick={() => dispatch(registerAction(userInput))}
-            className="w-full px-4 py-2 text-lg font-semibold text-white transition-colors duration-300 bg-blue-500 rounded-md shadow hover:bg-blue-600 focus:outline-none focus:ring-blue-200 focus:ring-4"
-          >
-            Register
-          </button>
+          {user.loading ? (
+            <button
+              disabled="true"
+              className="w-full px-48 py-2 cursor-not-allowed text-white transition-colors duration-300 bg-blue-400 rounded-md shadow hover:bg-blue-400 focus:outline-none focus:ring-blue-200 focus:ring-4"
+            >
+              <img src={spinner} alt="" className="w-7 h-7 object-center" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              onClick={registerBtn}
+              className="w-full px-4 py-2 text-lg font-semibold text-white transition-colors duration-300 bg-blue-500 rounded-md shadow hover:bg-blue-600 focus:outline-none focus:ring-blue-200 focus:ring-4"
+            >
+              Register
+            </button>
+          )}
 
           <p className="text-red-500 pt-2 italic font-semibold">{user.error}</p>
         </div>
-      </div>
+      </form>
     );
   };
 

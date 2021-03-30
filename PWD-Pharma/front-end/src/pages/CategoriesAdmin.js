@@ -1,12 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState} from "react";
 import {
   Button,
   makeStyles,
   Paper,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -21,25 +17,28 @@ import {
   editCategoryAction,
   fetchCategoryAction,
   fetchProductAction,
+  getItemLength,
 } from "../redux/actions";
-import { useDispatch, useSelector } from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import ReactPaginate from "react-paginate";
 import Swal from "sweetalert2";
+import {useHistory} from "react-router";
 
 const CategoriesAdmin = () => {
   const dispatch = useDispatch();
   const category = useSelector((state) => state.product.category);
+  const history = useHistory();
 
+  useEffect(() => {
+    dispatch(fetchCategoryAction(window.location.search));
+    dispatch(getItemLength());
+  }, [dispatch]);
   const [perPage] = useState(10);
   const [page, setPage] = useState(0);
-  const from = page * perPage;
-  const to = (page + 1) * perPage;
-  const { product_list, loading } = useSelector((state) => state.product);
-  const [pageCount, setPageCount] = useState(category.length / perPage);
 
-  const data = category.filter((val, index) => {
-    return index >= from && index < to;
-  });
+  const {product_list, loading} = useSelector((state) => state.product);
+  const {lengths} = useSelector((state) => state.admin);
+  const [pageCount, setPageCount] = useState(lengths.categories / perPage);
 
   useEffect(() => {
     dispatch(fetchProductAction());
@@ -56,7 +55,6 @@ const CategoriesAdmin = () => {
     },
   });
   const classes = useStyles();
-  const [searchWord, setSearch] = useState("");
 
   const toggle = (id) => {
     let catCheck = product_list.find((val) => val.product_category_id === id);
@@ -72,7 +70,7 @@ const CategoriesAdmin = () => {
         text: "You won't be able to revert this",
         icon: "warning",
         showCancelButton: true,
-        confirmButtonColor: "#3085d6",
+        confirmButtonColor: "teal",
         cancelButtonColor: "#d33",
         confirmButtonText: "Yes, deleted!",
       }).then((result) => {
@@ -91,18 +89,18 @@ const CategoriesAdmin = () => {
   };
   const saveButton = (id) => {
     if (product_category) {
-      dispatch(editCategoryAction({ id, product_category }));
+      dispatch(editCategoryAction({id, product_category}));
       setClick(false);
     }
   };
-
   const cancelButton = () => {
     setClick(false);
     setAddClick(false);
   };
 
+  const [searchWord, setSearch] = useState("");
   const searchBtn = () => {
-    const a = `?search=${searchWord}`;
+    const a = `?page=1&limit=10&search=${searchWord}`;
     dispatch(fetchCategoryAction(a));
   };
 
@@ -118,87 +116,80 @@ const CategoriesAdmin = () => {
       });
     }
   };
-  const [filterCategory, setFilterCategory] = useState("");
-  const [openn, setOpenn] = useState(false);
-
-  const handleFilterCategory = (e) => {
-    setFilterCategory(e.target.value);
-  };
-  const handleOpenn = () => {
-    setOpenn(true);
-  };
-  const handleClosee = () => {
-    setOpenn(false);
-  };
 
   const renderRow = () => {
-    let newCat;
-    if (filterCategory) {
-      newCat = data.filter((val) => val.product_category_id === filterCategory);
-    } else {
-      newCat = data;
+    if (category) {
+      return category.map((row, index) => (
+        <TableRow key={row.product_category_id}>
+          <TableCell>
+            {page === 0 ? index + 1 : index + 1 + page * 10}
+          </TableCell>
+          {clicked &&
+          row.product_category_id === idCat &&
+          addClick === false ? (
+            <>
+              <TableCell>
+                <TextField
+                  placeholder="Category Name"
+                  label="Category Name"
+                  id="category-name"
+                  defaultValue={row.product_category}
+                  size="small"
+                  onChange={(e) => setCategory(e.target.value)}
+                />
+              </TableCell>
+              <TableCell align="center">
+                <Button
+                  onClick={() => saveButton(row.product_category_id)}
+                  style={{backgroundColor: "#4886af", color: "white"}}
+                >
+                  Save
+                </Button>
+                <Button
+                  onClick={() => cancelButton()}
+                  style={{
+                    backgroundColor: "#E8282C",
+                    color: "white",
+                    marginLeft: "20px",
+                  }}
+                >
+                  Cancel
+                </Button>
+              </TableCell>
+            </>
+          ) : (
+            <>
+              <TableCell>{row.product_category}</TableCell>
+              <TableCell align="center">
+                <Button
+                  onClick={() => editButton(row.product_category_id)}
+                  style={{
+                    backgroundColor: "#4a91bb",
+                    color: "white",
+                    outline: 0,
+                  }}
+                  disabled={addClick}
+                >
+                  Edit
+                </Button>
+                <Button
+                  onClick={() => toggle(row.product_category_id)}
+                  style={{
+                    backgroundColor: "#E8282C",
+                    color: "white",
+                    marginLeft: "20px",
+                    outline: 0,
+                  }}
+                  disabled={addClick}
+                >
+                  Delete
+                </Button>
+              </TableCell>
+            </>
+          )}
+        </TableRow>
+      ));
     }
-    return newCat.map((row, index) => (
-      <TableRow key={row.product_category_id}>
-        <TableCell>{index + 1}</TableCell>
-        {clicked && row.product_category_id === idCat && addClick === false ? (
-          <>
-            <TableCell>
-              <TextField
-                placeholder="Category Name"
-                label="Category Name"
-                id="category-name"
-                defaultValue={row.product_category}
-                size="small"
-                onChange={(e) => setCategory(e.target.value)}
-              />
-            </TableCell>
-            <TableCell align="center">
-              <Button
-                onClick={() => saveButton(row.product_category_id)}
-                style={{ backgroundColor: "grey", color: "black" }}
-              >
-                Save
-              </Button>
-              <Button
-                onClick={() => cancelButton(row.product_category_id)}
-                style={{
-                  backgroundColor: "red",
-                  color: "white",
-                  marginLeft: "20px",
-                }}
-              >
-                Cancel
-              </Button>
-            </TableCell>
-          </>
-        ) : (
-          <>
-            <TableCell>{row.product_category}</TableCell>
-            <TableCell align="center">
-              <Button
-                onClick={() => editButton(row.product_category_id)}
-                style={{ backgroundColor: "grey", color: "black" }}
-                disabled={addClick}
-              >
-                Edit
-              </Button>
-              <Button
-                onClick={() => toggle(row.product_category_id)}
-                style={{
-                  backgroundColor: "red",
-                  color: "white",
-                  marginLeft: "20px",
-                }}
-                disabled={addClick}
-              >
-                Delete
-              </Button>
-            </TableCell>
-          </>
-        )}
-      </TableRow>
-    ));
   };
   const renderNewRow = () => {
     return addClick ? (
@@ -216,14 +207,14 @@ const CategoriesAdmin = () => {
         <TableCell align="center">
           <Button
             onClick={() => saveAddBtn(product_category)}
-            style={{ backgroundColor: "grey", color: "black" }}
+            style={{backgroundColor: "#4886af", color: "white"}}
           >
             Save
           </Button>
           <Button
             onClick={cancelButton}
             style={{
-              backgroundColor: "red",
+              backgroundColor: "#E8282C",
               color: "white",
               marginLeft: "20px",
             }}
@@ -235,26 +226,28 @@ const CategoriesAdmin = () => {
     ) : null;
   };
   useEffect(() => {
-    setPageCount(category.length / perPage);
-  }, [perPage, category]);
-
-  useEffect(() => {
-    dispatch(fetchCategoryAction());
-  }, [dispatch]);
+    setPageCount(lengths.categories / perPage);
+  }, [perPage]);
 
   const handlePageClick = (e) => {
     const selectedPage = e.selected;
     setPage(selectedPage);
+    const url = `?page=${selectedPage + 1}&limit=10`;
+    dispatch(fetchCategoryAction(url));
+    history.push(`/category${url}`);
   };
 
   const renderAll = () => {
     return (
       <div>
-        <div style={{ display: "flex", flexDirection: "row" }}>
-          <div style={{ display: "flex" }}>
-            <TableContainer component={Paper}>
+        <div style={{display: "flex", flexDirection: "row"}}>
+          <div>
+            <TableContainer
+              component={Paper}
+              style={{backgroundColor: "#D5F5EE"}}
+            >
               <Table className={classes.table} aria-label="simple table">
-                <TableHead>
+                <TableHead style={{backgroundColor: "#65ccb8"}}>
                   <TableRow>
                     <TableCell>#</TableCell>
                     <TableCell>Category</TableCell>
@@ -279,43 +272,32 @@ const CategoriesAdmin = () => {
               left: "78%",
             }}
           >
-            <Button
-              style={{ backgroundColor: "black", color: "white" }}
-              onClick={() => setAddClick(true)}
-            >
-              Add New Category
-            </Button>
-            <FormControl style={{ width: "275px" }}>
-              <InputLabel id="demo-controlled-open-select-label">
-                Filter By Category
-              </InputLabel>
-              <Select
-                labelId="demo-controlled-open-select-label"
-                id="category"
-                open={openn}
-                onClose={handleClosee}
-                onOpen={handleOpenn}
-                onChange={handleFilterCategory}
-              >
-                <MenuItem value="">All</MenuItem>
-                {data.map((val) => (
-                  <MenuItem value={val.product_category_id}>
-                    {val.product_category}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
             <div>
               <TextField
                 placeholder="Search..."
                 label="Search"
                 id="search"
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ width: "275px", paddingBottom: "10px" }}
+                style={{width: "275px", paddingBottom: "10px"}}
               />
             </div>
-            <Button onClick={searchBtn} style={{ backgroundColor: "teal" }}>
+            <Button
+              onClick={searchBtn}
+              style={{backgroundColor: "#2460A7FF", color: "white", outline: 0}}
+            >
               Search
+            </Button>
+
+            <Button
+              style={{
+                backgroundColor: "#0098b3",
+                color: "white",
+                marginTop: "20px",
+                outline: 0,
+              }}
+              onClick={() => setAddClick(true)}
+            >
+              Add New Category
             </Button>
           </div>
         </div>
@@ -324,8 +306,7 @@ const CategoriesAdmin = () => {
   };
   return (
     <div className="flex flex-col mx-2">
-      <div className="flex flex-wrap">{loading ? null : renderAll()}</div>
-      <div className="flex-row align-baseline">
+      <div className="flex-row align-baseline mt-4">
         <ReactPaginate
           previousLabel={"Prev"}
           nextLabel={"Next"}
@@ -340,6 +321,7 @@ const CategoriesAdmin = () => {
           activeClassName={"active"}
         />
       </div>
+      <div className="flex flex-wrap">{loading ? null : renderAll()}</div>
     </div>
   );
 };

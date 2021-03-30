@@ -16,13 +16,9 @@ module.exports = (sequelize, DataTypes) => {
 			this.belongsTo(models.Order_Status, {
 				foreignKey: "order_status_id",
 			});
-			this.hasMany(models.Payment_Images, {
-				foreignKey: "transaction_invoice_number",
-				onDelete: "cascade",
-			});
-			this.hasMany(models.Finance, {
-				foreignKey: "transaction_invoice_number",
-				onDelete: "cascade",
+
+			this.belongsTo(models.Custom_Product, {
+				foreignKey: "custom_product_id",
 			});
 		}
 	}
@@ -42,10 +38,10 @@ module.exports = (sequelize, DataTypes) => {
 				},
 			},
 			transaction_date: {
-				type: DataTypes.STRING,
+				type: DataTypes.DATE,
 			},
 			transaction_invoice_number: {
-				type: DataTypes.INTEGER,
+				type: DataTypes.STRING(500),
 			},
 			order_status_id: {
 				type: DataTypes.INTEGER,
@@ -68,7 +64,7 @@ module.exports = (sequelize, DataTypes) => {
 				type: DataTypes.STRING,
 			},
 			transaction_payment_details: {
-				type: DataTypes.STRING,
+				type: DataTypes.INTEGER,
 			},
 			user_address: {
 				type: DataTypes.STRING,
@@ -76,6 +72,14 @@ module.exports = (sequelize, DataTypes) => {
 			payment_method_id: {
 				type: DataTypes.INTEGER,
 				references: { model: "Payment_Method", key: "payment_method_id" },
+			},
+			product_qty: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+			},
+			custom_product_id: {
+				type: DataTypes.INTEGER,
+				references: { model: "custom_products", key: "custom_product_id" },
 			},
 		},
 		{

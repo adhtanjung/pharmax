@@ -4,12 +4,25 @@ const {
   createJWTToken,
   transpostPromise,
 } = require("../helpers");
+const pify = require("pify");
+const { uploader } = require("../handlers");
+const fs = require("fs");
+const {
+  User_Address,
+  Cart,
+  Custom_Product,
+  Product,
+  Admin_Notif,
+  User_Notif,
+} = require("../models");
+const { Op } = require("sequelize");
+const { emailOne, emailTwo } = require("../helpers/emailTemplate");
+const { createAdminToken } = require("../helpers");
 
 // PWP-9-10
 const userRegister = async (req, res) => {
   try {
     const { username, email, password, security_question } = req.body;
-    console.log(security_question);
     const encryptedPassword = hashPassword(password);
     const user = await models.User.create({
       user_username: username,
@@ -24,7 +37,7 @@ const userRegister = async (req, res) => {
       from: "Pharma <pwd.pharma@gmail.com>",
       to: email,
       subject: "Your Pharma account: Email address verification",
-      html: `<h2>Hi ${username},</h2><h2>Welcome to Pharma</h2><br><p>Please verify your email</p><br><a href='http://localhost:3000/verification?token=${token}'>Click here to verify your email</a>`,
+      html: emailOne(email, token),
     };
     await transpostPromise(mailOptions);
 
@@ -68,11 +81,65 @@ const userLogin = async (req, res) => {
       attributes: { exclude: ["createdAt", "updatedAt", "user_password"] },
     });
 
-    const responseData = { ...user[0].dataValues };
-    const token = createJWTToken(responseData);
-    responseData.token = token;
+    const fetch_cart1 = await Cart.findAll({
+      where: {
+        [Op.and]: {
+          user_id: {
+            [Op.eq]: user[0].user_id,
+          },
+          custom_product_id: {
+            [Op.eq]: null,
+          },
+        },
+      },
 
-    return res.send(responseData);
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+      include: [
+        {
+          model: Product,
+          attributes: { exclude: ["createdAt", "updatedAt"] },
+        },
+      ],
+    });
+
+    const fetch_cart2 = await Custom_Product.findAll({
+      where: {
+        [Op.and]: {
+          user_id: user[0].user_id,
+          is_checkout: 0,
+        },
+      },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+      include: [
+        {
+          model: Cart,
+          include: [
+            {
+              model: Product,
+              attributes: { exclude: ["createdAt", "updatedAt"] },
+            },
+          ],
+          attributes: { exclude: ["createdAt", "updatedAt"] },
+        },
+      ],
+    });
+
+    if (user[0].user_role_id === 1) {
+      const responseData = { ...user[0].dataValues };
+      const token = createAdminToken(responseData);
+      responseData.token = token;
+
+      return res.send(responseData);
+    } else {
+      // console.log(user[0].user_id);
+      // console.log([...fetch_cart1]);
+      const responseData = { ...user[0].dataValues };
+      const token = createJWTToken(responseData);
+      responseData.token = token;
+      responseData.cart = [...fetch_cart1, ...fetch_cart2];
+
+      return res.send(responseData);
+    }
   } catch (err) {
     console.log(err);
     return res.status(500).send({ message: "Login Error" });
@@ -91,7 +158,7 @@ const userSendReset = async (req, res) => {
       from: "Pharma <pwd.pharma@gmail.com>",
       to: email,
       subject: "Your Pharma account: Reset password",
-      html: `<h4>Hi ${userData.user_username},</h4><h4>Welcome to Pharma</h4><br><h4>We got a request to reset your Pharma password</h4><br><a href='http://localhost:3000/change-password?token=${token}'>Click here to reset your password</a><br><h4>If you ignore this message, your password will not be changed.<h4/>`,
+      html: emailTwo(token),
     };
     await transpostPromise(mailOptions);
 
@@ -177,6 +244,167 @@ const userSecurityQuestion = async (req, res) => {
   }
 };
 
+// PWP-47 USER ADDRESS
+const addNewUserAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_address } = req.body;
+    await User_Address.create({
+      user_address,
+      user_id: id,
+    });
+    return res.status(200).send({ message: "New Address Successfully Added" });
+  } catch (err) {
+    return res.status(500).send({ message: "Failed to Add New Address" });
+  }
+};
+
+const getUserAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const response = await User_Address.findAll({
+      where: {
+        user_id: id,
+      },
+    });
+
+    return res.status(200).send(response);
+  } catch (err) {
+    return res.status(500).send({
+      message: "Failed to Get the Address",
+    });
+  }
+};
+const editUserAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_address } = req.body;
+    await User_Address.update(
+      { user_address },
+      {
+        where: { user_address_id: id },
+      }
+    );
+    return res.status(200).send({ message: "Address Updated" });
+  } catch (err) {
+    return res
+      .status(500)
+      .send({ message: "Failed to Update the Selected Address" });
+  }
+};
+
+const deleteUserAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await User_Address.destroy({
+      where: { user_address_id: id },
+    });
+    return res.status(200).send({ message: "Address deleted" });
+  } catch (err) {
+    return res
+      .status(500)
+      .send({ message: "Failed to Delete the Selected Address" });
+  }
+};
+
+const userAddRecipes = async (req, res) => {
+  try {
+    const path = "/recipes";
+    const upload = pify(uploader(path, "RCP").fields([{ name: "image" }]));
+
+    upload(req, res, async (err) => {
+      const { image } = req.files;
+      const { user_id } = JSON.parse(req.body.data);
+      const imagepath = image ? `${path}/${image[0].filename}` : null;
+
+      const response = await models.Recipes.create({
+        user_id,
+        recipes_status: "Pending",
+        recipes_image_path: imagepath,
+      });
+      if (response) {
+        await Admin_Notif.create({
+          admin_notif_messages: "User upload prescription",
+          admin_notif_status: 0,
+          user_id: user_id,
+          order_status_id: 7,
+        });
+        return res.status(201).send(response);
+      } else {
+        fs.unlinkSync(`public${imagepath}`);
+        return res.status(500).send(err.message);
+      }
+    });
+  } catch (err) {
+    return res.status(500).send(err.message);
+  }
+};
+
+const getNotifUser = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    const findRes = await User_Notif.findAll({
+      where: {
+        user_id,
+        user_notif_status: 0,
+      },
+    });
+    if (findRes.length == 1) {
+      const response = await User_Notif.findAll({
+        where: {
+          [Op.and]: {
+            user_id,
+            user_notif_status: 0,
+          },
+        },
+        attributes: {
+          exclude: ["updatedAt"],
+        },
+      });
+      return res.status(200).send(response);
+    } else {
+      const response = await User_Notif.findAll({
+        where: {
+          [Op.and]: {
+            user_id,
+            user_notif_status: 0,
+          },
+        },
+        // order: ["createdAt", "DESC"],
+        attributes: {
+          exclude: ["updatedAt"],
+        },
+      });
+      return res.status(200).send(response);
+    }
+  } catch (err) {
+    return res.status(500).send({ message: "Failed to get user notification" });
+  }
+};
+
+const userNotifRead = async (req, res) => {
+  try {
+    const { user_notif_id } = req.body;
+
+    const response = await User_Notif.update(
+      { user_notif_status: 1 },
+      {
+        where: {
+          [Op.and]: {
+            user_notif_id,
+          },
+        },
+      }
+    );
+    return res.send({ message: "Notif mark as read" });
+  } catch (err) {
+    return res
+      .status(500)
+      .send({ message: "Failed to mark user notification" });
+  }
+};
+
 module.exports = {
   userRegister,
   userVerification,
@@ -185,4 +413,11 @@ module.exports = {
   userChangePassword,
   userCheck,
   userSecurityQuestion,
+  getUserAddress,
+  addNewUserAddress,
+  editUserAddress,
+  deleteUserAddress,
+  userAddRecipes,
+  getNotifUser,
+  userNotifRead,
 };
